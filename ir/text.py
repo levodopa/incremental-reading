@@ -15,84 +15,93 @@ class TextManager:
     def __init__(self):
         self.history = defaultdict(list)
 
-    def highlight(self, bgColor=None, textColor=None):
-        if not bgColor:
-            bgColor = self.settings['highlightBgColor']
-        if not textColor:
-            textColor = self.settings['highlightTextColor']
-
-        script = "highlight('%s', '%s');" % (bgColor, textColor)
+    def highlight(self, bgColor=None, textColor=None, classValue=None):
+        if not classValue: 
+            classValue = "normal"
+        script = "highlight('%s', '%s', '%s');" % (bgColor, textColor, classValue)
         mw.web.eval(script)
         self.save()
 
-    def extract(self, settings=None):
+    def bold(self):
+        script = "format('%s');" % ("bold")
+        mw.web.eval(script)
+        self.save()
+
+    def underline(self):
+        script = "format('%s');" % ("underline")
+        mw.web.eval(script)
+        self.save()
+
+    def italics(self):
+        script = "format('%s');" % ("italics")
+        mw.web.eval(script)
+        self.save()
+
+    def strikethrough(self):
+        script = "format('%s');" % ("strikethrough")
+        mw.web.eval(script)
+        self.save()
+
+    def extract(self):
         if not mw.web.selectedText():
             showInfo('Please select some text to extract.')
             return
 
-        if not settings:
-            settings = self.settings
-
-        if settings['plainText']:
-            mw.web.evalWithCallback(
-                'getPlainText()',
-                lambda text: self.create(text, settings))
+        if self.settings['plainText']:
+            mw.web.evalWithCallback('getPlainText()', self.create)
         else:
-            mw.web.evalWithCallback(
-                'getHtmlText()',
-                lambda text: self.create(text, settings))
+            mw.web.evalWithCallback('getHtmlText()', self.create)
 
-    def create(self, text, settings):
-        self.highlight(settings['extractBgColor'], settings['extractTextColor'])
-        createIrNote = (settings['modelName'] == self.settings['modelName'])
+    def create(self, text):
+        classValue = "extract"
+        self.highlight(self.settings['extractBgColor'], 
+                       self.settings['extractTextColor'], 
+                       classValue)
+
         currentCard = mw.reviewer.card
         currentNote = currentCard.note()
-        model = mw.col.models.byName(settings['modelName'])
+        model = mw.col.models.byName(self.settings['modelName'])
         newNote = Note(mw.col, model)
         newNote.tags = currentNote.tags
-        setField(newNote, settings['textField'], fixImages(text))
 
-        if settings['extractDeck']:
-            did = mw.col.decks.byName(settings['extractDeck'])['id']
+        setField(newNote, self.settings['textField'], fixImages(text))
+        setField(newNote,
+                 self.settings['sourceField'],
+                 getField(currentNote, self.settings['sourceField']))
+
+        if self.settings['editSource']:
+            EditCurrent(mw)
+
+        if self.settings['extractDeck']:
+            did = mw.col.decks.byName(self.settings['extractDeck'])['id']
         else:
             did = currentCard.did
 
-        if createIrNote:
-            if settings['copyTitle']:
-                title = getField(currentNote, settings['titleField'])
-            else:
-                title = ''
-
-            setField(newNote,
-                     settings['sourceField'],
-                     getField(currentNote, settings['sourceField']))
-
-            if settings['editExtract']:
-                setField(newNote, settings['titleField'], title)
-                addCards = AddCards(mw)
-                addCards.editor.setNote(newNote)
-                deckName = mw.col.decks.get(did)['name']
-                addCards.deckChooser.deck.setText(deckName)
-                addCards.modelChooser.models.setText(settings['modelName'])
-            else:
-                title, accepted = getText(
-                    'Enter title', title='Extract Text', default=title)
-                if accepted:
-                    setField(newNote, settings['titleField'], title)
-                    newNote.model()['did'] = did
-                    mw.col.addNote(newNote)
-
-            if settings['scheduleExtract']:
-                cards = newNote.cards()
-                if cards:
-                    mw.readingManager.scheduler.answer(
-                        cards[0], SCHEDULE_EXTRACT)
+        if self.settings['copyTitle']:
+            title = getField(currentNote, self.settings['titleField'])
         else:
-            newNote.tags += settings['tags']
-            mw.col.addNote(newNote)
+            title = ''
 
-        if settings['editSource']:
-            EditCurrent(mw)
+        if self.settings['editExtract']:
+            setField(newNote, self.settings['titleField'], title)
+            addCards = AddCards(mw)
+            addCards.editor.setNote(newNote)
+            deckName = mw.col.decks.get(did)['name']
+            addCards.deckChooser.deck.setText(deckName)
+            addCards.modelChooser.models.setText(self.settings['modelName'])
+        else:
+            title, accepted = getText('Enter title',
+                                      title='Extract Text',
+                                      default=title)
+            if accepted:
+                setField(newNote, self.settings['titleField'], title)
+                newNote.model()['did'] = did
+                mw.col.addNote(newNote)
+
+        if self.settings['extractSchedule']:
+            cards = newNote.cards()
+            if cards:
+                mw.readingManager.scheduler.answer(cards[0], SCHEDULE_EXTRACT)
 
     def remove(self):
         mw.web.eval('removeText()')
