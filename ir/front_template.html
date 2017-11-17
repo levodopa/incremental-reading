@@ -1,0 +1,17 @@
+<script>  
+      function class_toggler(cl, toggle)
+			{
+				var additionalelements = document.getElementsByClassName(cl),i;
+				for (var i = 0; i < additionalelements.length; i ++) {
+					if (additionalelements[i].getAttribute(toggle)== 'off') {
+						additionalelements[i].setAttribute(toggle, 'on')
+					 }
+					else {
+						additionalelements[i].setAttribute(toggle, 'off')
+					}
+				}
+			}
+</script>  
+
+
+<button type="button" class="ir-reading" accesskey="o" onclick="class_toggler('ir-highlight', 'ir-overlay');" >IR Overlay</button>
