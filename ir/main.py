@@ -37,16 +37,25 @@ class ReadingManager:
         self.viewManager.resetZoom('deckBrowser')
         self.addModel()
         self.loadMenuItems()
-        self.shortcuts = [
-            ('Down', self.viewManager.lineDown),
-            ('PgDown', self.viewManager.pageDown),
-            ('PgUp', self.viewManager.pageUp),
-            ('Up', self.viewManager.lineUp),
-            (self.settings['extractKey'], self.textManager.extract),
-            (self.settings['highlightKey'], self.textManager.highlight),
-            (self.settings['removeKey'], self.textManager.remove),
-            (self.settings['undoKey'], self.textManager.undo),
-        ]
+
+        self.shortcuts = [(self.composeShortcut(self.settings['extractCTRLKey'], self.settings['extractKey']), self.textManager.extract),
+                          (self.composeShortcut(self.settings['highlightCTRLKey'], self.settings['highlightKey']), self.textManager.highlight),
+                          (self.composeShortcut(self.settings['removeCTRLKey'], self.settings['removeKey']), self.textManager.remove),
+                          (self.composeShortcut(self.settings['undoCTRLKey'], self.settings['undoKey']), self.textManager.undo),
+                          ('Up', self.viewManager.lineUp),
+                          ('Down', self.viewManager.lineDown),
+                          ('PgUp', self.viewManager.pageUp),
+                          ('PgDown', self.viewManager.pageDown),
+                          (self.composeShortcut(self.settings['boldCTRLKey'], self.settings['boldKey']),  self.textManager.bold),
+                          (self.composeShortcut(self.settings['underlineCTRLKey'], self.settings['underlineKey']),  self.textManager.underline),
+                          (self.composeShortcut(self.settings['italicsCTRLKey'], self.settings['italicsKey']),  self.textManager.italics),
+                          (self.composeShortcut(self.settings['strikethroughCTRLKey'], self.settings['strikethroughKey']),  self.textManager.strikethrough)]
+
+    def composeShortcut(self, CTRLkey, Key):
+        if CTRLkey == 'none':
+            composedshortcut = Key
+        else: composedshortcut = CTRLkey + '+' + Key
+        return composedshortcut
 
     def loadMenuItems(self):
         if hasattr(mw, 'customMenus') and 'Read' in mw.customMenus:
@@ -122,6 +131,78 @@ class ReadingManager:
 
         mw.col.models.addTemplate(model, template)
         mw.col.models.add(model)
+
+    def quickAdd(self, quickKey):
+        if not viewingIrText():
+            return
+
+        self.currentQuickKey = quickKey
+
+        if quickKey['plainText']:
+            mw.web.evalWithCallback('getPlainText()', self.createNote)
+        else:
+            mw.web.evalWithCallback('getHtmlText()', self.createNote)
+
+    def createNote(self, selectedText):
+        regularKey = self.currentQuickKey['regularKey']
+        if self.currentQuickKey['shift'] == True:
+            shiftkey = "SHIFT_"
+        else : shiftkey = ""
+        if self.currentQuickKey['alt'] == True:
+            altkey = "ALT_"
+        else : altkey = ""
+        self.textManager.highlight(self.currentQuickKey['bgColor'],
+                                   self.currentQuickKey['textColor'],
+                                   "quick_"+shiftkey+altkey+regularKey)
+
+        newModel = mw.col.models.byName(self.currentQuickKey['modelName'])
+        newNote = notes.Note(mw.col, newModel)
+        setField(newNote, self.currentQuickKey['fieldName'], selectedText)
+
+        card = mw.reviewer.card
+        currentNote = card.note()
+        tags = currentNote.stringTags()
+        # Sets tags for the note, but still have to set them in the editor
+        #   if show dialog (see below)
+        newNote.setTagsFromStr(tags)
+
+        for f in newModel['flds']:
+            if self.settings['sourceField'] == f['name']:
+                setField(newNote,
+                         self.settings['sourceField'],
+                         getField(currentNote, self.settings['sourceField']))
+
+        if self.currentQuickKey['editExtract']:
+            addCards = AddCards(mw)
+            addCards.editor.setNote(newNote)
+            if newNote.stringTags():
+                addCards.editor.tags.setText(newNote.stringTags().strip())
+            addCards.modelChooser.models.setText(
+                self.currentQuickKey['modelName'])
+            addCards.deckChooser.deck.setText(
+                self.currentQuickKey['deckName'])
+        else:
+            deckId = mw.col.decks.byName(self.currentQuickKey['deckName'])['id']
+            newNote.model()['did'] = deckId
+            ret = newNote.dupeOrEmpty()
+            if ret == 1:
+                showWarning(_(
+                    'The first field is empty.'),
+                    help='AddItems#AddError')
+                return
+            cards = mw.col.addNote(newNote)
+            if not cards:
+                showWarning(_('''\
+                    The input you have provided would make an empty \
+                    question on all cards.'''), help='AddItems')
+                return
+
+            clearAudioQueue()
+            mw.col.autosave()
+            tooltip(_('Added'))
+
+        if self.currentQuickKey['editSource']:
+            EditCurrent(mw)
 
 
 def answerButtonList(self, _old):
