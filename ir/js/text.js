@@ -1,23 +1,26 @@
-function highlight(bgColor, textColor) {
-    if (window.getSelection) {
-        var range, sel = window.getSelection();
+function highlight(bgColor, textColor, classValue) {
+    var selection = window.getSelection().getRangeAt(0);
+    var selectedText = selection.extractContents();
+    var span = document.createElement("span");
+    span.className = "ir-highlight " + classValue;
+    span.setAttribute("ir-overlay", "on");
+    span.appendChild(selectedText);
+    //var styleSheet = document.styleSheets[0];
+    //css_rule = '[ir-overlay~="on"].ir-highlight.' + classValue +
+    //    "{ color: " + textColor + "; background-color: " + bgColor +";}";
+    //styleSheet.insertRule(css_rule);
+    selection.insertNode(span);
+}
 
-        if (sel.rangeCount && sel.getRangeAt) {
-            range = sel.getRangeAt(0);
-        }
+function format(classValue) {
+    var selection = window.getSelection().getRangeAt(0);
+    var selectedText = selection.extractContents();
+    var span = document.createElement("span");
+    span.className = "ir-highlight " + classValue;
+    span.setAttribute("ir-overlay", "on");
+    span.appendChild(selectedText);
 
-        document.designMode = "on";
-        if (range) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-
-        document.execCommand("foreColor", false, textColor);
-        document.execCommand("hiliteColor", false, bgColor);
-
-        document.designMode = "off";
-        sel.removeAllRanges();
-    }
+    selection.insertNode(span);
 }
 
 function removeText() {
