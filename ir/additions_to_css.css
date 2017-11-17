@@ -1,0 +1,56 @@
+
+
+/* Incremental Reading Highlighting */
+
+
+[ir-overlay~="on"].ir-highlight.normal {
+	background-color: Orange;
+    	font-weight: bold;
+	color: inherit;
+	opacity: 0.5;
+}
+
+[ir-overlay~="on"].ir-highlight.extract {
+	background-color: inherit;
+	color: inherit;
+	opacity: 0.5;
+	border: 1px dotted 2px blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_Q {
+	background-color: inherit;
+	color: Blue ;
+    	font-weight: bold;
+	opacity: 0.9;
+	border-bottom: 0.1em solid Blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_ALT_Q {
+	background-color: inherit;
+	color: Blue ;
+	opacity: 1;
+	border-bottom: 0.1em dotted Blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_C {
+	background-color: inherit;
+	color: Purple;
+	opacity: 0.9;
+	border-bottom: 0.1em dashed Purple;o
+}
+
+[ir-overlay~="on"].ir-highlight.bold {
+	font-weight: bold;
+}
+
+[ir-overlay~="on"].ir-highlight.underline {
+	text-decoration: underline;
+}
+
+[ir-overlay~="on"].ir-highlight.strikethrough {
+	text-decoration: line-through;
+}
+
+[ir-overlay~="on"].ir-highlight.italics {
+	font-style: italic;
+}
