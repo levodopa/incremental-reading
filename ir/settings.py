@@ -1,5 +1,4 @@
 from functools import partial
-from unicodedata import normalize
 import json
 import os
 
@@ -22,7 +21,6 @@ from PyQt5.QtWidgets import (QButtonGroup,
 
 from anki.hooks import addHook
 from aqt import mw
-from aqt.tagedit import TagEdit
 from aqt.utils import showInfo, showWarning, tooltip
 
 from ._version import __version__
@@ -37,26 +35,32 @@ from .util import (addMenuItem,
 
 class SettingsManager:
     def __init__(self):
-        mw.addonManager.setConfigAction(__name__, self.showDialog)
         addHook('unloadProfile', self.saveSettings)
-
+        self.metadata = {'name': 'Incremental Reading'}
         self.defaults = {'badTags': ['iframe', 'script'],
+                         'boldKey': 'b',
+                         'boldCTRLKey': 'Ctrl',
                          'copyTitle': False,
                          'editExtract': False,
                          'editSource': False,
                          'extractBgColor': 'Green',
                          'extractDeck': None,
                          'extractKey': 'x',
+                         'extractCTRLKey': 'Ctrl',
                          'extractMethod': 'percent',
                          'extractRandom': True,
+                         'extractSchedule': True,
                          'extractTextColor': 'White',
                          'extractValue': 30,
                          'feedLog': {},
                          'generalZoom': 1,
                          'highlightBgColor': 'Yellow',
                          'highlightKey': 'h',
+                         'highlightCTRLKey': 'none',
                          'highlightTextColor': 'Black',
                          'importDeck': 'Default',
+                         'italicsKey': 'i',
+                         'italicsCTRLKey': 'Ctrl',
                          'laterMethod': 'percent',
                          'laterRandom': True,
                          'laterValue': 50,
@@ -68,17 +72,22 @@ class SettingsManager:
                          'pageScrollFactor': 0.5,
                          'plainText': False,
                          'quickKeys': {},
-                         'removeKey': 'z',
-                         'scheduleExtract': True,
+                         'removeKey': 'd',
+                         'removeCTRLKey': 'Ctrl',
                          'scroll': {},
                          'soonMethod': 'percent',
                          'soonRandom': True,
                          'soonValue': 10,
                          'sourceField': 'Source',
                          'sourceFormat': '{url} ({date})',
+                         'strikethroughKey': 's',
+                         'strikethroughCTRLKey': 'Shift+Ctrl',
                          'textField': 'Text',
                          'titleField': 'Title',
-                         'undoKey': 'u',
+                         'underlineKey': 'u',
+                         'underlineCTRLKey': 'Ctrl',
+                         'undoKey': 'z',
+                         'undoCTRLKey': 'Ctrl',
                          'userAgent': 'IR/{} (+{})'.format(
                              __version__, IR_GITHUB_URL),
                          'zoom': {},
@@ -86,15 +95,21 @@ class SettingsManager:
 
     def loadSettings(self):
         self.settingsChanged = False
-        self.mediaDir = os.path.join(mw.pm.profileFolder(), 'collection.media')
-        self.jsonPath = os.path.join(self.mediaDir, '_ir.json')
+        self.addonDir = os.path.dirname(os.path.realpath(__file__))
+        self.jsonPath = os.path.join(self.addonDir, 'config.json')
+        self.jsonMetaFilePath = os.path.join(self.addonDir, 'meta.json')
 
         if os.path.isfile(self.jsonPath):
             with open(self.jsonPath, encoding='utf-8') as jsonFile:
-                self.settings = json.load(jsonFile)
+                try :
+                    self.settings = json.load(jsonFile)
+                except :
+                    showWarning("Error loading JSON-format: corrupt or empty. Will load defaults.")
+                    self.settings = self.defaults
             self._addMissingSettings()
             self._removeOutdatedQuickKeys()
         else:
+            showWarning("Error opening JSON-file. Will load defaults.")
             self.settings = self.defaults
 
         if self.settingsChanged:
@@ -111,24 +126,21 @@ class SettingsManager:
                 self.settingsChanged = True
 
     def _removeOutdatedQuickKeys(self):
-        required = [
-            'alt',
-            'ctrl',
-            'editExtract',
-            'editSource',
-            'extractBgColor',
-            'extractDeck',
-            'extractTextColor',
-            'modelName',
-            'regularKey',
-            'shift',
-            'tags',
-            'textField',
-        ]
+        required = ['alt',
+                    'bgColor',
+                    'ctrl',
+                    'deckName',
+                    'editExtract',
+                    'editSource',
+                    'fieldName',
+                    'modelName',
+                    'regularKey',
+                    'shift',
+                    'textColor']
 
-        for keyCombo, settings in self.settings['quickKeys'].copy().items():
+        for keyCombo, quickKey in self.settings['quickKeys'].copy().items():
             for k in required:
-                if k not in settings:
+                if k not in quickKey:
                     self.settings['quickKeys'].pop(keyCombo)
                     self.settingsChanged = True
                     break
@@ -137,18 +149,17 @@ class SettingsManager:
         with open(self.jsonPath, 'w', encoding='utf-8') as jsonFile:
             json.dump(self.settings, jsonFile)
 
-        updateModificationTime(self.mediaDir)
+        updateModificationTime(self.addonDir)
 
     def loadMenuItems(self):
         menuName = 'Read::Quick Keys'
-
         if menuName in mw.customMenus:
             mw.customMenus[menuName].clear()
 
-        for keyCombo, settings in self.settings['quickKeys'].items():
-            menuText = 'Add Card [%s -> %s]' % (settings['modelName'],
-                                                settings['extractDeck'])
-            function = partial(mw.readingManager.textManager.extract, settings)
+        for keyCombo, quickKey in self.settings['quickKeys'].items():
+            menuText = 'Add Card [%s -> %s]' % (quickKey['modelName'],
+                                                quickKey['deckName'])
+            function = partial(mw.readingManager.quickAdd, quickKey)
             addMenuItem(menuName, menuText, function, keyCombo)
 
         setMenuVisibility(menuName)
@@ -205,8 +216,8 @@ class SettingsManager:
         self.settings['editSource'] = self.editSourceCheckBox.isChecked()
         self.settings['plainText'] = self.plainTextCheckBox.isChecked()
         self.settings['copyTitle'] = self.copyTitleCheckBox.isChecked()
-        self.settings['scheduleExtract'] = (self
-                                            .scheduleExtractCheckBox
+        self.settings['extractSchedule'] = (self
+                                            .extractScheduleCheckBox
                                             .isChecked())
         self.settings['soonRandom'] = self.soonRandomCheckBox.isChecked()
         self.settings['laterRandom'] = self.laterRandomCheckBox.isChecked()
@@ -263,42 +274,115 @@ class SettingsManager:
         extractKeyLabel = QLabel('Extract Key')
         removeKeyLabel = QLabel('Remove Key')
         undoKeyLabel = QLabel('Undo Key')
+       #
+        boldKeyLabel = QLabel('Format Bold')
+        underlineKeyLabel = QLabel('Format Unterline')
+        italicsKeyLabel = QLabel('Format Italics')
+        strikethroughKeyLabel = QLabel('Format Strikethrough')
+
 
         self.extractKeyComboBox = QComboBox()
+        self.extractCTRLKeyComboBox = QComboBox()
         self.highlightKeyComboBox = QComboBox()
+        self.highlightCTRLKeyComboBox = QComboBox()
         self.removeKeyComboBox = QComboBox()
+        self.removeCTRLKeyComboBox = QComboBox()
         self.undoKeyComboBox = QComboBox()
+        self.undoCTRLKeyComboBox = QComboBox()
+       #
+        self.boldKeyComboBox = QComboBox()
+        self.boldCTRLKeyComboBox = QComboBox()
+        self.underlineKeyComboBox = QComboBox()
+        self.underlineCTRLKeyComboBox = QComboBox()
+        self.italicsKeyComboBox = QComboBox()
+        self.italicsCTRLKeyComboBox = QComboBox()
+        self.strikethroughKeyComboBox = QComboBox()
+        self.strikethroughCTRLKeyComboBox = QComboBox()
 
         keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789')
         for comboBox in [self.highlightKeyComboBox,
                          self.extractKeyComboBox,
                          self.removeKeyComboBox,
-                         self.undoKeyComboBox]:
+                         self.undoKeyComboBox,
+                         self.boldKeyComboBox,
+                         self.underlineKeyComboBox,
+                         self.italicsKeyComboBox,
+                         self.strikethroughKeyComboBox]:
             comboBox.addItems(keys)
+
+        for CTRLKeycomboBox in [self.highlightCTRLKeyComboBox,
+                                self.extractCTRLKeyComboBox,
+                                self.removeCTRLKeyComboBox,
+                                self.undoCTRLKeyComboBox,
+                                self.boldCTRLKeyComboBox,
+                                self.underlineCTRLKeyComboBox,
+                                self.italicsCTRLKeyComboBox,
+                                self.strikethroughCTRLKeyComboBox]:
+            CTRLKeycomboBox.addItem('none')
+            CTRLKeycomboBox.addItem('ALT')
+            CTRLKeycomboBox.addItem('CTRL')
+            CTRLKeycomboBox.addItem('CTRL+ALT')
+            CTRLKeycomboBox.addItem('SHIFT')
+            CTRLKeycomboBox.addItem('SHIFT+ALT')
+            CTRLKeycomboBox.addItem('SHIFT+CTRL')
 
         self._setCurrentKeys()
 
         highlightKeyLayout = QHBoxLayout()
         highlightKeyLayout.addWidget(highlightKeyLabel)
         highlightKeyLayout.addStretch()
+        highlightKeyLayout.addWidget(self.highlightCTRLKeyComboBox)
         highlightKeyLayout.addWidget(self.highlightKeyComboBox)
+        
 
         extractKeyLayout = QHBoxLayout()
         extractKeyLayout.addWidget(extractKeyLabel)
         extractKeyLayout.addStretch()
+        extractKeyLayout.addWidget(self.extractCTRLKeyComboBox)
         extractKeyLayout.addWidget(self.extractKeyComboBox)
+        
 
         removeKeyLayout = QHBoxLayout()
         removeKeyLayout.addWidget(removeKeyLabel)
         removeKeyLayout.addStretch()
+        removeKeyLayout.addWidget(self.removeCTRLKeyComboBox)
         removeKeyLayout.addWidget(self.removeKeyComboBox)
 
         undoKeyLayout = QHBoxLayout()
         undoKeyLayout.addWidget(undoKeyLabel)
         undoKeyLayout.addStretch()
+        undoKeyLayout.addWidget(self.undoCTRLKeyComboBox)
         undoKeyLayout.addWidget(self.undoKeyComboBox)
 
+        boldKeyLayout = QHBoxLayout()
+        boldKeyLayout.addWidget(boldKeyLabel)
+        boldKeyLayout.addStretch()
+        boldKeyLayout.addWidget(self.boldCTRLKeyComboBox)
+        boldKeyLayout.addWidget(self.boldKeyComboBox)
+
+        underlineKeyLayout = QHBoxLayout()
+        underlineKeyLayout.addWidget(underlineKeyLabel)
+        underlineKeyLayout.addStretch()
+        underlineKeyLayout.addWidget(self.underlineCTRLKeyComboBox)
+        underlineKeyLayout.addWidget(self.underlineKeyComboBox)
+
+        italicsKeyLayout = QHBoxLayout()
+        italicsKeyLayout.addWidget(italicsKeyLabel)
+        italicsKeyLayout.addStretch()
+        italicsKeyLayout.addWidget(self.italicsCTRLKeyComboBox)
+        italicsKeyLayout.addWidget(self.italicsKeyComboBox)
+
+        strikethroughKeyLayout = QHBoxLayout()
+        strikethroughKeyLayout.addWidget(strikethroughKeyLabel)
+        strikethroughKeyLayout.addStretch()
+        strikethroughKeyLayout.addWidget(self.strikethroughCTRLKeyComboBox)
+        strikethroughKeyLayout.addWidget(self.strikethroughKeyComboBox)
+
         controlsLayout = QVBoxLayout()
+        controlsLayout.addLayout(boldKeyLayout)
+        controlsLayout.addLayout(underlineKeyLayout)
+        controlsLayout.addLayout(italicsKeyLayout)
+        controlsLayout.addLayout(strikethroughKeyLayout)
         controlsLayout.addLayout(highlightKeyLayout)
         controlsLayout.addLayout(extractKeyLayout)
         controlsLayout.addLayout(removeKeyLayout)
@@ -355,17 +439,33 @@ class SettingsManager:
         return tab
 
     def _setCurrentKeys(self):
-        setComboBoxItem(self.highlightKeyComboBox,
-                        self.settings['highlightKey'])
+        setComboBoxItem(self.highlightKeyComboBox, self.settings['highlightKey'])
+        setComboBoxItem(self.highlightCTRLKeyComboBox, self.settings['highlightCTRLKey'])
         setComboBoxItem(self.extractKeyComboBox, self.settings['extractKey'])
+        setComboBoxItem(self.extractCTRLKeyComboBox, self.settings['extractCTRLKey'])
         setComboBoxItem(self.removeKeyComboBox, self.settings['removeKey'])
+        setComboBoxItem(self.removeCTRLKeyComboBox, self.settings['removeCTRLKey'])
         setComboBoxItem(self.undoKeyComboBox, self.settings['undoKey'])
+        setComboBoxItem(self.undoCTRLKeyComboBox, self.settings['undoCTRLKey'])
+        setComboBoxItem(self.boldKeyComboBox, self.settings['boldKey'])
+        setComboBoxItem(self.boldCTRLKeyComboBox, self.settings['boldCTRLKey'])
+        setComboBoxItem(self.underlineKeyComboBox, self.settings['underlineKey'])
+        setComboBoxItem(self.underlineCTRLKeyComboBox, self.settings['underlineCTRLKey'])
+        setComboBoxItem(self.italicsKeyComboBox, self.settings['italicsKey'])
+        setComboBoxItem(self.italicsCTRLKeyComboBox, self.settings['italicsCTRLKey'])
+        setComboBoxItem(self.strikethroughKeyComboBox, self.settings['strikethroughKey'])
+        setComboBoxItem(self.strikethroughCTRLKeyComboBox, self.settings['strikethroughCTRLKey'])
 
     def _saveKeys(self):
-        keys = [self.highlightKeyComboBox.currentText(),
-                self.extractKeyComboBox.currentText(),
-                self.removeKeyComboBox.currentText(),
-                self.undoKeyComboBox.currentText()]
+       #TODO: check if this still works
+        keys = [self.highlightCTRLKeyComboBox.currentText() + self.highlightKeyComboBox.currentText(),
+                self.extractCTRLKeyComboBox.currentText() + self.extractKeyComboBox.currentText(),
+                self.removeCTRLKeyComboBox.currentText() + self.removeKeyComboBox.currentText(),
+                self.undoCTRLKeyComboBox.currentText() + self.undoKeyComboBox.currentText(),
+                self.boldCTRLKeyComboBox.currentText() + self.boldKeyComboBox.currentText(),
+                self.underlineCTRLKeyComboBox.currentText() + self.underlineKeyComboBox.currentText(),
+                self.italicsCTRLKeyComboBox.currentText() + self.italicsKeyComboBox.currentText(),
+                self.strikethroughCTRLKeyComboBox.currentText() + self.strikethroughKeyComboBox.currentText()]
 
         if len(set(keys)) < len(keys):
             showInfo('There is a conflict with the keys you have chosen.'
@@ -373,22 +473,30 @@ class SettingsManager:
             self._setCurrentKeys()
             return False
         else:
-            self.settings['highlightKey'] = (self
-                                             .highlightKeyComboBox
-                                             .currentText()
-                                             .lower())
-            self.settings['extractKey'] = (self
-                                           .extractKeyComboBox
-                                           .currentText()
-                                           .lower())
-            self.settings['removeKey'] = (self
-                                          .removeKeyComboBox
-                                          .currentText()
-                                          .lower())
-            self.settings['undoKey'] = (self
-                                        .undoKeyComboBox
-                                        .currentText()
-                                        .lower())
+            self.settings['highlightKey'] = (self.highlightKeyComboBox.currentText().lower())
+            self.settings['highlightCTRLKey'] = (self.highlightCTRLKeyComboBox.currentText().lower())
+
+            self.settings['extractKey'] = (self.extractKeyComboBox.currentText().lower())
+            self.settings['extractCTRLKey'] = (self.extractCTRLKeyComboBox.currentText().lower())
+
+            self.settings['removeKey'] = (self.removeKeyComboBox.currentText().lower())
+            self.settings['removeCTRLKey'] = (self.removeCTRLKeyComboBox.currentText().lower())
+
+            self.settings['undoKey'] = (self.undoKeyComboBox.currentText().lower())
+            self.settings['undoCTRLKey'] = (self.undoCTRLKeyComboBox.currentText().lower())
+
+            self.settings['boldKey'] = (self.boldKeyComboBox.currentText().lower())
+            self.settings['boldCTRLKey'] = (self.boldCTRLKeyComboBox.currentText().lower())
+
+            self.settings['underlineKey'] = (self.underlineKeyComboBox.currentText().lower())
+            self.settings['underlineCTRLKey'] = (self.underlineCTRLKeyComboBox.currentText().lower())
+
+            self.settings['italicsKey'] = (self.italicsKeyComboBox.currentText().lower())
+            self.settings['italicsCTRLKey'] = (self.italicsCTRLKeyComboBox.currentText().lower())
+
+            self.settings['strikethroughKey'] = (self.strikethroughKeyComboBox.currentText().lower())
+            self.settings['strikethroughCTRLKey'] = (self.strikethroughCTRLKeyComboBox.currentText().lower())
+
             return True
 
     def _getExtractionTab(self):
@@ -424,7 +532,7 @@ class SettingsManager:
         self.editSourceCheckBox = QCheckBox('Edit Source Note')
         self.plainTextCheckBox = QCheckBox('Extract as Plain Text')
         self.copyTitleCheckBox = QCheckBox('Copy Title')
-        self.scheduleExtractCheckBox = QCheckBox('Schedule Extracts')
+        self.extractScheduleCheckBox = QCheckBox('Schedule Extracts')
 
         if self.settings['editSource']:
             self.editSourceCheckBox.setChecked(True)
@@ -435,8 +543,8 @@ class SettingsManager:
         if self.settings['copyTitle']:
             self.copyTitleCheckBox.setChecked(True)
 
-        if self.settings['scheduleExtract']:
-            self.scheduleExtractCheckBox.setChecked(True)
+        if self.settings['extractSchedule']:
+            self.extractScheduleCheckBox.setChecked(True)
 
         layout = QVBoxLayout()
         layout.addLayout(extractDeckLayout)
@@ -444,7 +552,7 @@ class SettingsManager:
         layout.addWidget(self.editSourceCheckBox)
         layout.addWidget(self.plainTextCheckBox)
         layout.addWidget(self.copyTitleCheckBox)
-        layout.addWidget(self.scheduleExtractCheckBox)
+        layout.addWidget(self.extractScheduleCheckBox)
         layout.addStretch()
 
         tab = QWidget()
@@ -472,12 +580,16 @@ class SettingsManager:
 
     def _saveHighlightSettings(self):
         target = self.targetComboBox.currentText()
-        bgColor = self.bgColorComboBox.currentText()
-        textColor = self.textColorComboBox.currentText()
-
+        if not self.bgColorComboBox.currentText() == "None":
+            bgColor = self.bgColorComboBox.currentText()
+            textColor = self.textColorComboBox.currentText()
+        else :
+            bgColor = "transparent"
+            textColor = "inherit"
         if target == '[Highlight Key]':
             self.settings['highlightBgColor'] = bgColor
             self.settings['highlightTextColor'] = textColor
+
         elif target == '[Extract Key]':
             self.settings['extractBgColor'] = bgColor
             self.settings['extractTextColor'] = textColor
@@ -568,8 +680,12 @@ class SettingsManager:
             return [line.strip() for line in colorsFile]
 
     def _updateColorPreview(self):
-        bgColor = self.bgColorComboBox.currentText()
-        textColor = self.textColorComboBox.currentText()
+        if not self.bgColorComboBox.currentText() == "None":
+            bgColor = self.bgColorComboBox.currentText()
+            textColor = self.textColorComboBox.currentText()
+        else :
+            bgColor = "transparent"
+            textColor = "inherit"
         styleSheet = ('QLabel {'
                       'background-color: %s;'
                       'color: %s;'
@@ -752,13 +868,6 @@ class SettingsManager:
         unsetButton = QPushButton('Unset')
         unsetButton.clicked.connect(self._unsetQuickKey)
 
-        tagsLabel = QLabel('Tags')
-        self.tagsEditBox = TagEdit(mw)
-        self.tagsEditBox.setCol(mw.col)
-        tagsLayout = QHBoxLayout()
-        tagsLayout.addWidget(tagsLabel)
-        tagsLayout.addWidget(self.tagsEditBox)
-
         buttonLayout = QHBoxLayout()
         buttonLayout.addStretch()
         buttonLayout.addWidget(newButton)
@@ -774,7 +883,6 @@ class SettingsManager:
         layout.addWidget(self.quickKeyEditExtractCheckBox)
         layout.addWidget(self.quickKeyEditSourceCheckBox)
         layout.addWidget(self.quickKeyPlainTextCheckBox)
-        layout.addLayout(tagsLayout)
         layout.addLayout(buttonLayout)
 
         tab = QWidget()
@@ -783,20 +891,19 @@ class SettingsManager:
         return tab
 
     def _updateQuickKeysTab(self):
-        keyCombo = self.quickKeysComboBox.currentText()
-        if keyCombo:
-            settings = self.settings['quickKeys'][keyCombo]
-            setComboBoxItem(self.destDeckComboBox, settings['extractDeck'])
-            setComboBoxItem(self.noteTypeComboBox, settings['modelName'])
-            setComboBoxItem(self.textFieldComboBox, settings['textField'])
-            self.ctrlKeyCheckBox.setChecked(settings['ctrl'])
-            self.altKeyCheckBox.setChecked(settings['alt'])
-            self.shiftKeyCheckBox.setChecked(settings['shift'])
-            setComboBoxItem(self.regularKeyComboBox, settings['regularKey'])
-            self.quickKeyEditExtractCheckBox.setChecked(settings['editExtract'])
-            self.quickKeyEditSourceCheckBox.setChecked(settings['editSource'])
-            self.quickKeyPlainTextCheckBox.setChecked(settings['plainText'])
-            self.tagsEditBox.setText(mw.col.tags.join(settings['tags']))
+        quickKey = self.quickKeysComboBox.currentText()
+        if quickKey:
+            model = self.settings['quickKeys'][quickKey]
+            setComboBoxItem(self.destDeckComboBox, model['deckName'])
+            setComboBoxItem(self.noteTypeComboBox, model['modelName'])
+            setComboBoxItem(self.textFieldComboBox, model['fieldName'])
+            self.ctrlKeyCheckBox.setChecked(model['ctrl'])
+            self.altKeyCheckBox.setChecked(model['alt'])
+            self.shiftKeyCheckBox.setChecked(model['shift'])
+            setComboBoxItem(self.regularKeyComboBox, model['regularKey'])
+            self.quickKeyEditExtractCheckBox.setChecked(model['editExtract'])
+            self.quickKeyEditSourceCheckBox.setChecked(model['editSource'])
+            self.quickKeyPlainTextCheckBox.setChecked(model['plainText'])
         else:
             self._clearQuickKeysTab()
 
@@ -820,59 +927,52 @@ class SettingsManager:
         self.quickKeyEditExtractCheckBox.setChecked(False)
         self.quickKeyEditSourceCheckBox.setChecked(False)
         self.quickKeyPlainTextCheckBox.setChecked(False)
-        self.tagsEditBox.clear()
 
     def _unsetQuickKey(self):
-        keyCombo = self.quickKeysComboBox.currentText()
-        if keyCombo:
-            self.settings['quickKeys'].pop(keyCombo)
-            removeComboBoxItem(self.quickKeysComboBox, keyCombo)
+        quickKey = self.quickKeysComboBox.currentText()
+        if quickKey:
+            self.settings['quickKeys'].pop(quickKey)
+            removeComboBoxItem(self.quickKeysComboBox, quickKey)
             self._clearQuickKeysTab()
             self._populateTargetComboBox()
             self.loadMenuItems()
 
     def _setQuickKey(self):
-        tags = mw.col.tags.canonify(
-            mw.col.tags.split(normalize('NFC', self.tagsEditBox.text())))
+        quickKey = {'deckName': self.destDeckComboBox.currentText(),
+                    'modelName': self.noteTypeComboBox.currentText(),
+                    'fieldName': self.textFieldComboBox.currentText(),
+                    'ctrl': self.ctrlKeyCheckBox.isChecked(),
+                    'alt': self.altKeyCheckBox.isChecked(),
+                    'shift': self.shiftKeyCheckBox.isChecked(),
+                    'regularKey': self.regularKeyComboBox.currentText(),
+                    'bgColor': self.bgColorComboBox.currentText(),
+                    'textColor': self.textColorComboBox.currentText(),
+                    'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
+                    'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
+                    'plainText': self.quickKeyPlainTextCheckBox.isChecked()}
 
-        settings = {
-            'alt': self.altKeyCheckBox.isChecked(),
-            'ctrl': self.ctrlKeyCheckBox.isChecked(),
-            'editExtract': self.quickKeyEditExtractCheckBox.isChecked(),
-            'editSource': self.quickKeyEditSourceCheckBox.isChecked(),
-            'extractBgColor': self.bgColorComboBox.currentText(),
-            'extractDeck': self.destDeckComboBox.currentText(),
-            'extractTextColor': self.textColorComboBox.currentText(),
-            'modelName': self.noteTypeComboBox.currentText(),
-            'plainText': self.quickKeyPlainTextCheckBox.isChecked(),
-            'regularKey': self.regularKeyComboBox.currentText(),
-            'shift': self.shiftKeyCheckBox.isChecked(),
-            'tags': tags,
-            'textField': self.textFieldComboBox.currentText(),
-        }
-
-        for k in ['extractDeck', 'modelName', 'regularKey']:
-            if not settings[k]:
+        for k in ['deckName', 'modelName', 'regularKey']:
+            if not quickKey[k]:
                 showInfo('Please complete all settings. Destination deck,'
                          ' note type, and a letter or number for the key'
                          ' combination are required.')
                 return
 
         keyCombo = ''
-        if settings['ctrl']:
+        if quickKey['ctrl']:
             keyCombo += 'Ctrl+'
-        if settings['alt']:
+        if quickKey['alt']:
             keyCombo += 'Alt+'
-        if settings['shift']:
+        if quickKey['shift']:
             keyCombo += 'Shift+'
-        keyCombo += settings['regularKey']
+        keyCombo += quickKey['regularKey']
 
         if keyCombo in self.settings['quickKeys']:
             tooltip('Shortcut updated')
         else:
             tooltip('New shortcut added: %s' % keyCombo)
 
-        self.settings['quickKeys'][keyCombo] = settings
+        self.settings['quickKeys'][keyCombo] = quickKey
         self.quickKeysComboBox.addItem(keyCombo)
         setComboBoxItem(self.quickKeysComboBox, keyCombo)
         self._populateTargetComboBox()
