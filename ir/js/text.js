@@ -24,7 +24,6 @@ function markTags(hashtag) {
     selection.insertNode(span);
 }
 
-
 function format(classValue) {
     var selection = window.getSelection().getRangeAt(0);
     var selectedText = selection.extractContents();
