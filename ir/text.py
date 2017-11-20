@@ -126,7 +126,7 @@ class TextManager:
     def extract(self):
         if not mw.web.selectedText():
             showInfo('Please select some text to extract.')
-
+            return
         if self.settings['plainText']:
             mw.web.evalWithCallback('getPlainText()', self.create)
         else:
