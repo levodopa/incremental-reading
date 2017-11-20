@@ -56,6 +56,7 @@ class ReadingManager:
                           (self.composeShortcut(self.settings['underlineCTRLKey'], self.settings['underlineKey']),  self.textManager.underline),
                           (self.composeShortcut(self.settings['italicsCTRLKey'], self.settings['italicsKey']),  self.textManager.italics),
                           (self.composeShortcut(self.settings['strikethroughCTRLKey'], self.settings['strikethroughKey']),  self.textManager.strikethrough),
+                          #following settings are in an real experimental state!
                           ('t', self.textManager.tag),
                           ('shift+a', self.textManager.tag_algorithm),
                           ('shift+d', self.textManager.tag_definition),
