@@ -1,3 +1,5 @@
+#EXPERIMENTAL 4.7.14
+
 from random import gauss, shuffle
 
 from PyQt5.QtCore import Qt

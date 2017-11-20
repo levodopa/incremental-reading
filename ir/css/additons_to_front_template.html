@@ -1,3 +1,7 @@
+<!-- These changes to your front-template are optiopnal! -->
+<!-- It should show exemplary how it would be possible to toggle highlighting and formating on an IR-card on and of to view the original note -->
+
+<!--Add this <script> tag to the <head>-section or another allowed position of your IR front-template -->
 <script>  
       function class_toggler(cl, toggle)
 			{
@@ -13,5 +17,6 @@
 			}
 </script>  
 
-
+<!--Add this <button> tag e.g. to a <nav>-section or another usefull position of your IR front-template -->
 <button type="button" class="ir-reading" accesskey="o" onclick="class_toggler('ir-highlight', 'ir-overlay');" >IR Overlay</button>
+<!-- on click or via pressing the defined accesskey "ALT+O" it will run the js-function class-toggler -->

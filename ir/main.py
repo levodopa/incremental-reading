@@ -1,15 +1,21 @@
+#EXPERIMENTAL 4.7.14
+
+from anki import notes
 from anki.hooks import addHook, wrap
 from aqt import mw
 from aqt.reviewer import Reviewer
 
 import sip
 
+from aqt.addcards import AddCards
+from aqt.editcurrent import EditCurrent
+
 from .about import showAbout
 from .importer import Importer
 from .schedule import Scheduler
 from .settings import SettingsManager
 from .text import TextManager
-from .util import addMenuItem, isIrCard
+from .util import addMenuItem, isIrCard, viewingIrText, setField
 from .view import ViewManager
 
 
@@ -49,7 +55,18 @@ class ReadingManager:
                           (self.composeShortcut(self.settings['boldCTRLKey'], self.settings['boldKey']),  self.textManager.bold),
                           (self.composeShortcut(self.settings['underlineCTRLKey'], self.settings['underlineKey']),  self.textManager.underline),
                           (self.composeShortcut(self.settings['italicsCTRLKey'], self.settings['italicsKey']),  self.textManager.italics),
-                          (self.composeShortcut(self.settings['strikethroughCTRLKey'], self.settings['strikethroughKey']),  self.textManager.strikethrough)]
+                          (self.composeShortcut(self.settings['strikethroughCTRLKey'], self.settings['strikethroughKey']),  self.textManager.strikethrough),
+                          ('t', self.textManager.tag),
+                          ('shift+a', self.textManager.tag_algorithm),
+                          ('shift+d', self.textManager.tag_definition),
+                          ('shift+i', self.textManager.tag_important),
+                          ('ctrl+alt+d', self.textManager.tag_diagnostic),
+                          ('ctrl+alt+i', self.textManager.tag_illness),
+                          ('ctrl+alt+l', self.textManager.tag_lab_value),
+                          ('ctrl+alt+p', self.textManager.tag_pathogen),
+                          ('ctrl+alt+m', self.textManager.tag_pill),
+                          ('ctrl+alt+s', self.textManager.tag_symptom),
+                          ('ctrl+alt+t', self.textManager.tag_treatment)]               
 
     def composeShortcut(self, CTRLkey, Key):
         if CTRLkey == 'none':
@@ -154,7 +171,6 @@ class ReadingManager:
         self.textManager.highlight(self.currentQuickKey['bgColor'],
                                    self.currentQuickKey['textColor'],
                                    "quick_"+shiftkey+altkey+regularKey)
-
         newModel = mw.col.models.byName(self.currentQuickKey['modelName'])
         newNote = notes.Note(mw.col, newModel)
         setField(newNote, self.currentQuickKey['fieldName'], selectedText)

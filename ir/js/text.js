@@ -1,3 +1,5 @@
+//EXPERIMENTAL 4.7.14
+
 function highlight(bgColor, textColor, classValue) {
     var selection = window.getSelection().getRangeAt(0);
     var selectedText = selection.extractContents();
@@ -11,6 +13,17 @@ function highlight(bgColor, textColor, classValue) {
     //styleSheet.insertRule(css_rule);
     selection.insertNode(span);
 }
+
+function markTags(hashtag) {
+    var selection = window.getSelection().getRangeAt(0);
+    var selectedText = selection.extractContents();
+    var span = document.createElement("span");
+    span.className = "ir-highlight " + hashtag;
+    span.setAttribute("ir-overlay", "on");
+    span.appendChild(selectedText);
+    selection.insertNode(span);
+}
+
 
 function format(classValue) {
     var selection = window.getSelection().getRangeAt(0);

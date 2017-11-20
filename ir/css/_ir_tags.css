@@ -1,0 +1,198 @@
+/* Instead of inserting styles like background or text color directly to a <span> tag,
+    it is much better to add spans with different class-names. 
+    The look of these different <span> classes can be modified via css globaly, 
+    so changes in styling will affect every <span>-Tag in your IR-notes.
+    The attribute "ir-overlay" in <span>-tags makes it possible to include a function
+    for toogling css formating aplied via this file on and off.
+*/
+
+/* 
+   At the moment you have to do changes on layout highlighting and formating by hand. 
+   On later releases changes can directly be done via the options dialogue box!
+*/
+
+/* Incremental Reading - Highlighting, Extraction and Quickkeys */
+
+[ir-overlay~="on"].ir-highlight.normal {
+    background-color: Orange;
+    font-weight: bold;
+    color: inherit;
+    opacity: 0.5;
+}
+
+[ir-overlay~="on"].ir-highlight.extract {
+    background-color: inherit;
+    color: inherit;
+    opacity: 0.5;
+    border: 1px dotted 2px blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_Q {
+    background-color: inherit;
+    color: Blue;
+    font-weight: bold;
+    opacity: 0.9;
+    border-bottom: 0.1em solid Blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_ALT_Q {
+    background-color: inherit;
+    color: Blue;
+    opacity: 1;
+    border-bottom: 0.1em dotted Blue;
+}
+
+[ir-overlay~="on"].ir-highlight.quick_C {
+    background-color: inherit;
+    color: Purple;
+    opacity: 0.9;
+    border-bottom: 0.1em dashed Purple;
+    o
+}
+
+
+/* Incremental Reading - Basic formating */
+[ir-overlay~="on"].ir-highlight.bold {
+    font-weight: bold;
+}
+
+[ir-overlay~="on"].ir-highlight.underline {
+    text-decoration: underline;
+}
+
+[ir-overlay~="on"].ir-highlight.strikethrough {
+    text-decoration: line-through;
+}
+
+[ir-overlay~="on"].ir-highlight.italics {
+    font-style: italic;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged::before {
+    content: "#";
+}
+
+/* Incremental Reading - Tag-Highlighting */
+
+[ir-overlay~="on"].ir-highlight.tagged.algorithm {
+    color: DarkSlateGray;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.definition {
+    color: blue;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.illness {
+    color: orange;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.important {
+    font-weight: bold;
+    color: red;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.diagnostic {
+    color: DarkSlateBlue;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.lab_value {
+    color: FireBrick
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.pathogen {
+    color: BlueViolet;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.pill {
+    color: DarkGreen;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.symptom {
+    color: SaddleBrown;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.treatment {
+    color: CadetBlue;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.algorithm::after,
+[ir-overlay~="on"].ir-highlight.tagged.definition::after,
+[ir-overlay~="on"].ir-highlight.tagged.illness::after,
+[ir-overlay~="on"].ir-highlight.tagged.important::after,
+[ir-overlay~="on"].ir-highlight.tagged.diagnostic::after,
+[ir-overlay~="on"].ir-highlight.tagged.lab_value::after,
+[ir-overlay~="on"].ir-highlight.tagged.pathogen::after,
+[ir-overlay~="on"].ir-highlight.tagged.pill::after,
+[ir-overlay~="on"].ir-highlight.tagged.symptom::after,
+[ir-overlay~="on"].ir-highlight.tagged.treatment::after {
+        content: "";
+        display: inline-block;
+        height: 16px;
+        vertical-align: middle;
+        position: relative;
+        width: 20px;
+        height: 20px;
+        float: none;
+        background-color: transparent;
+        opacity: 0.6;
+    }
+
+[ir-overlay~="on"].ir-highlight.tagged.algorithm::after {
+    background: url('_icon_tag_algorithm.png') no-repeat;
+    background-position: 3px 0px;
+    background-size: 16px 16px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.definition::after {
+    background: url('_icon_tag_definition.png') no-repeat;
+    background-position: 2px 0px;
+    background-size: 16px 16px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.illness::after {
+    background: url('_icon_tag_illness.png') no-repeat;
+    background-position: 1px 0px;
+    background-size: 16px 16px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.important::after {
+    background: url('_icon_tag_important.png') no-repeat;
+    background-position: -3px 0px;
+    background-size: 16px 16px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.diagnostic::after {
+    background: url('_icon_tag_diagnostic.png') no-repeat;
+    background-position: 2px 0px;
+    background-size: 15px 15px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.lab_value::after {
+    background: url('_icon_tag_lab_value.png') no-repeat;
+    background-position: 0px 0px;
+    background-size: 14px 16px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.pill::after {
+    background: url('_icon_tag_pill.png') no-repeat;
+    background-position: 2px 0px;
+    background-size: 14px 14px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.pathogen::after {
+    background: url('_icon_tag_pathogen.png') no-repeat;
+    background-position: 3px 0px;
+    background-size: 13px 15px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.symptom::after {
+    background: url('_icon_tag_symptom.png') no-repeat;
+    background-position: 3px 3px;
+    background-size: 12px 10px;
+}
+
+[ir-overlay~="on"].ir-highlight.tagged.treatment::after {
+    background: url('_icon_tag_treatment.png') no-repeat;
+    background-position: 2px 2px;
+    background-size: 10px 14px;
+}

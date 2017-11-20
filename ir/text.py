@@ -1,3 +1,4 @@
+#EXPERIMENTAL 4.7.14
 from collections import defaultdict
 
 from anki.notes import Note
@@ -20,6 +21,86 @@ class TextManager:
             classValue = "normal"
         script = "highlight('%s', '%s', '%s');" % (bgColor, textColor, classValue)
         mw.web.eval(script)
+        self.save()
+
+    def tag(self):
+        hashtag = None
+        self.addTag(hashtag)
+
+    def tag_algorithm(self):
+        hashtag = "algorithm"
+        self.addTag(hashtag)
+
+    def tag_definition(self):
+        hashtag = "definition"
+        self.addTag(hashtag) 
+
+    def tag_important(self):
+        hashtag = "important"
+        self.addTag(hashtag)
+   
+    def tag_diagnostic(self):
+        hashtag = "diagnostic"
+        self.addTag(hashtag)
+
+    def tag_illness(self):
+        hashtag = "illness"
+        self.addTag(hashtag)
+
+    def tag_lab_value(self):
+        hashtag = "lab_value"
+        self.addTag(hashtag)
+
+    def tag_pathogen(self):
+        hashtag = "pathogen"
+        self.addTag(hashtag)
+        
+    def tag_pill(self):
+        hashtag = "pill"
+        self.addTag(hashtag)
+
+    def tag_symptom(self):
+        hashtag = "symptom"
+        self.addTag(hashtag)
+
+    def tag_treatment(self):
+        hashtag = "treatment"
+        self.addTag(hashtag)
+
+    def addTag(self, hashtag):
+        currentCard = mw.reviewer.card
+        currentNote = currentCard.note()
+        currentTags = currentNote.tags     
+
+        if not mw.web.selectedText():
+             if hashtag == None:
+                showInfo('Please select a text to add a tags.')
+                return
+             else :
+                new_tag = '#'+hashtag 
+                if new_tag in currentTags:
+                    currentTags.remove(new_tag)
+                    showInfo('Removed "'+ new_tag + '" from tags!\n\t'+ str(currentTags))
+                else : 
+                    currentTags.append(new_tag)
+                    showInfo('Added "'+ new_tag + '" to tags!\n\t'+ str(currentTags)) 
+        else: 
+            selection = mw.web.selectedText()
+            selection = selection.replace("en ", "e ") # for German tags to singular form
+            selection = selection.strip().replace(" ", "_")
+            if hashtag == None:
+                new_tag = selection
+                script = "markTags('%s');" % ('tagged')
+            else : 
+                new_tag = '#'+hashtag+'::'+selection
+                script = "markTags('%s');" % ('tagged '+ hashtag)
+            if new_tag not in currentTags:
+                currentTags.append(new_tag)
+                mw.web.eval(script)
+                showInfo('Added "'+ new_tag + '" to tags:\n\t' +str(currentTags))
+            else:
+                mw.web.eval(script)
+                showInfo("Tag has already been added!")
         self.save()
 
     def bold(self):
@@ -45,7 +126,6 @@ class TextManager:
     def extract(self):
         if not mw.web.selectedText():
             showInfo('Please select some text to extract.')
-            return
 
         if self.settings['plainText']:
             mw.web.evalWithCallback('getPlainText()', self.create)
